@@ -24,6 +24,13 @@ const Index = () => {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Logo size="md" />
           <div className="flex items-center gap-4">
+             <Link
+    to="/admin/login"
+    className="px-4 py-2 text-sm rounded-lg border border-white/20 
+               text-white hover:bg-white/10 transition"
+  >
+    Admin Login
+  </Link>
             <Link to="/login" className="text-sm text-gray-300 hover:text-white transition-colors">Sign In</Link>
             <Link to="/register" className="text-sm font-medium px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 transition-colors">Get Started</Link>
           </div>

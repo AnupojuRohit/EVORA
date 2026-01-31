@@ -1,262 +1,189 @@
-import { useState , useEffect} from 'react';
-import { Car, CheckCircle ,Trash2  } from 'lucide-react';
-import DashboardLayout from '../../components/layout/DashboardLayout';
-import EmptyState from '../../components/ui/EmptyState';
-import { carAPI } from '../../lib/api';
-
-/* ---------------------------------------
-   Types
----------------------------------------- */
-interface Vehicle {
-  id: string;
-  brand: string;
-  model: string;
-  chargerType: string;
-  carNumber: string;
-}
+import { useEffect, useState } from "react"
+import { Plus, Pencil, Save, X } from "lucide-react"
+import { carAPI } from "../../lib/api"
+import AddVehicleSheet from "../../components/vehicles/AddVehicleSheet"
+import { VEHICLE_CATALOG } from "@/data/vehicleCatalog"
 
 
-/* ---------------------------------------
-   Vehicle Catalog (TEMP)
----------------------------------------- */
-const CAR_CATALOG: Record<string, Record<string, string>> = {
-  Tata: {
-    'Nexon EV': 'CCS2',
-    'Tiago EV': 'CCS2',
-  },
-  MG: {
-    'ZS EV': 'CCS2',
-  },
-  Tesla: {
-    'Model 3': 'Type 2',
-    'Model Y': 'Type 2',
-  },
-  Hyundai: {
-    'Kona Electric': 'CCS2',
-  },
-};
+export default function MyVehicles() {
+  const [vehicles, setVehicles] = useState<any[]>([])
+  const [open, setOpen] = useState(false)
 
+  const [activeVehicle, setActiveVehicle] = useState<any | null>(null)
+  const [editMode, setEditMode] = useState(false)
 
+  const [form, setForm] = useState({
+    purchase_date: "",
+    purchase_city: "",
+  })
 
-const MyVehicles = () => {
- const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-
-  /* ---------------------------------------
-     Add Vehicle Form
-  ---------------------------------------- */
-  const [brand, setBrand] = useState('');
-  const [model, setModel] = useState('');
-  const [carNumber, setCarNumber] = useState('');
-  const [showSuccess, setShowSuccess] = useState(false);
-  
+  /* LOAD VEHICLES */
   useEffect(() => {
-    const fetchVehicles = async () => {
-      try {
-        const res = await carAPI.getCars();
-        setVehicles(
-          res.data.map((c: any) => ({
-            id: c.id,
-            brand: c.brand,
-            model: c.model,
-            chargerType: c.charger_type,
-            carNumber: c.car_number,
-          }))
-        );
-      } catch (err) {
-        console.error('Failed to load vehicles', err);
+    carAPI.getCars().then(res => setVehicles(res.data))
+  }, [])
+
+  /* OPEN DETAILS */
+  const openDetails = (v: any) => {
+    setActiveVehicle(v)
+    setEditMode(!v.purchase_date && !v.purchase_city)
+
+    setForm({
+      purchase_date: v.purchase_date || "",
+      purchase_city: v.purchase_city || "",
+    })
+  }
+
+  /* SAVE DETAILS */
+  const saveDetails = async () => {
+    if (!activeVehicle) return
+
+    try {
+      const payload = {
+        purchase_date: form.purchase_date || null,
+        purchase_city: form.purchase_city || null,
       }
-    };
 
-    fetchVehicles();
-  }, []);
+      const res = await carAPI.updateCar(activeVehicle.id, payload)
 
-  
-  
+      setVehicles(vs =>
+        vs.map(v => (v.id === activeVehicle.id ? res.data : v))
+      )
 
-  const availableModels = brand ? Object.keys(CAR_CATALOG[brand]) : [];
-  const chargerType = brand && model ? CAR_CATALOG[brand][model] : '';
-
-  const handleDeleteVehicle = async (id: string) => {
-  try {
-    await carAPI.deleteCar(id);
-    setVehicles((prev) => prev.filter((v) => v.id !== id));
-  } catch (err) {
-    console.error('Failed to delete vehicle', err);
+      setActiveVehicle(res.data)
+      setEditMode(false)
+    } catch (err) {
+      console.error("SAVE FAILED:", err)
+      alert("Failed to save vehicle details")
+    }
   }
-};
-
-  const handleAddVehicle = async () => {
-  if (!brand || !model || !carNumber) return;
-
-  try {
-    const res = await carAPI.addCar({
-      brand,
-      model,
-      car_number: carNumber,
-      charger_type: chargerType,
-    });
-
-    setVehicles((prev) => [
-      ...prev,
-      {
-        id: res.data.id,
-        brand: res.data.brand,
-        model: res.data.model,
-        chargerType: res.data.charger_type,
-        carNumber: res.data.car_number,
-      },
-    ]);
-
-    setBrand('');
-    setModel('');
-    setCarNumber('');
-
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 2500);
-  } catch (err) {
-    console.error('Failed to add vehicle', err);
-  }
-};
 
   return (
-    <DashboardLayout userType="user">
-      <div className="max-w-5xl mx-auto space-y-10">
+    <div className="max-w-6xl mx-auto px-6 py-10 space-y-10">
 
-        {/* ---------------------------------------
-           EXISTING VEHICLES (TOP CARD)
-        ---------------------------------------- */}
-        <div className="bg-white rounded-2xl shadow-sm p-6">
-          <h1 className="text-xl font-semibold text-foreground mb-4">
-            My Vehicles
-          </h1>
-
-          {vehicles.length === 0 ? (
-            <EmptyState
-              icon={Car}
-              title="No vehicles added"
-              description="Add your EV below to start booking charging slots"
-            />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {vehicles.map((v) => (
-                <div
-                  key={v.id}
-                   className="relative p-4 rounded-xl bg-muted/50 hover:bg-muted transition"
-                > 
-                      {/* Delete Button – CENTER RIGHT */}
-  <div className="absolute inset-y-0 right-5 flex items-center">
-    <button
-      onClick={() => handleDeleteVehicle(v.id)}
-      className="text-muted-foreground hover:text-destructive transition"
-      title="Delete vehicle"
-    >
-      <Trash2 className="w-4 h-4" />
-    </button>
-  </div>
-                
-                  <p className="font-medium text-foreground">
-                {v.brand} {v.model}
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">
-                {v.carNumber}
-            </p>
-            <span className="inline-block mt-3 text-xs font-medium px-3 py-1 rounded-full bg-emerald-100 text-emerald-700">
-                {v.chargerType}
-            </span>
-            </div>
-              ))}
-            </div>
-          )}
+      {/* HEADER */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">My Vehicles</h1>
+          <p className="text-white/50 text-sm">Manage your EVs</p>
         </div>
 
-        {/* ---------------------------------------
-           DIVIDER WITH OR
-        ---------------------------------------- */}
-        <div className="relative flex items-center justify-center">
-          <div className="w-full h-px bg-border" />
-          <span className="absolute px-4 py-1 text-sm font-medium bg-background text-muted-foreground rounded-full border">
-            OR
-          </span>
-        </div>
-
-        {/* ---------------------------------------
-           ADD VEHICLE (INLINE FORM)
-        ---------------------------------------- */}
-        <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
-          <h2 className="text-lg font-semibold text-foreground">
-            Add a New Vehicle
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-            {/* Brand */}
-            <select
-              value={brand}
-              onChange={(e) => {
-                setBrand(e.target.value);
-                setModel('');
-              }}
-              className="p-3 rounded-lg border"
-            >
-              <option value="">Select Brand</option>
-              {Object.keys(CAR_CATALOG).map((b) => (
-                <option key={b} value={b}>{b}</option>
-              ))}
-            </select>
-
-            {/* Model */}
-            <select
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              disabled={!brand}
-              className="p-3 rounded-lg border disabled:opacity-50"
-            >
-              <option value="">Select Model</option>
-              {availableModels.map((m) => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-
-            {/* Charger Type */}
-            <input
-              type="text"
-              value={chargerType}
-              disabled
-              placeholder="Charger Type"
-              className="p-3 rounded-lg border bg-muted"
-            />
-
-            {/* Car Number */}
-            <input
-              type="text"
-              placeholder="Car Number (e.g. MH12AB1234)"
-              value={carNumber}
-              onChange={(e) => setCarNumber(e.target.value.toUpperCase())}
-              className="p-3 rounded-lg border"
-            />
-          </div>
-
-          <button
-            onClick={handleAddVehicle}
-            disabled={!brand || !model || !carNumber}
-            className="w-full mt-4 py-3 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 disabled:opacity-50"
-          >
-            Save Vehicle
-          </button>
-        </div>
+        <button
+          onClick={() => setOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-400 text-black font-medium"
+        >
+          <Plus size={16} />
+          Add Vehicle
+        </button>
       </div>
 
-      {/* ---------------------------------------
-         SUCCESS TOAST
-      ---------------------------------------- */}
-      {showSuccess && (
-        <div className="fixed bottom-6 right-6 bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-2">
-          <CheckCircle className="w-5 h-5" />
-          <span>Vehicle saved successfully</span>
-        </div>
-      )}
-    </DashboardLayout>
-  );
-};
+      {/* VEHICLE LIST */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {vehicles.map(v => (
+          <div
+            key={v.id}
+            className="rounded-2xl bg-white/5 border border-white/10 p-6"
+          >
+            <h3 className="text-lg font-medium">
+              {v.brand} {v.model}
+            </h3>
+            <p className="text-white/50 text-sm">{v.car_number}</p>
+            <span className="text-xs text-emerald-400">
+              {v.charger_type}
+            </span>
 
-export default MyVehicles;
+            <button
+              onClick={() => openDetails(v)}
+              className="mt-4 w-full py-2 rounded-lg bg-white/10 hover:bg-white/15"
+            >
+              View Details
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* DETAILS PANEL */}
+      {activeVehicle && (
+        <div className="rounded-3xl bg-white/5 border border-white/10 p-10 grid md:grid-cols-2 gap-10">
+
+          {/* LEFT */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">
+              {activeVehicle.brand} {activeVehicle.model}
+            </h2>
+
+            {!editMode ? (
+              <>
+                <p>Car Number: {activeVehicle.car_number}</p>
+                <p>Charger Type: {activeVehicle.charger_type}</p>
+                <p>Purchase Date: {activeVehicle.purchase_date || "Not set"}</p>
+                <p>Purchase City: {activeVehicle.purchase_city || "Not set"}</p>
+
+                <button
+                  onClick={() => setEditMode(true)}
+                  className="mt-4 px-4 py-2 rounded-lg bg-white/10"
+                >
+                  <Pencil size={14} /> Edit Details
+                </button>
+              </>
+            ) : (
+              <>
+                <input
+                  type="date"
+                  value={form.purchase_date}
+                  onChange={e =>
+                    setForm({ ...form, purchase_date: e.target.value })
+                  }
+                  className="w-full p-2 rounded bg-black/40 border border-white/10"
+                />
+
+                <input
+                  placeholder="Purchase City"
+                  value={form.purchase_city}
+                  onChange={e =>
+                    setForm({ ...form, purchase_city: e.target.value })
+                  }
+                  className="w-full p-2 rounded bg-black/40 border border-white/10"
+                />
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={saveDetails}
+                    className="flex items-center gap-2 px-5 py-2 rounded-lg
+                               bg-emerald-500 text-black font-medium hover:bg-emerald-400"
+                  >
+                    <Save size={16} />
+                    Save
+                  </button>
+
+                  <button
+                    onClick={() => setEditMode(false)}
+                    className="flex items-center gap-2 px-5 py-2 rounded-lg
+                               bg-white/10 hover:bg-white/15"
+                  >
+                    <X size={16} />
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* RIGHT IMAGE */}
+          <img
+            src="/car.jpg"
+            alt="vehicle"
+            className="rounded-2xl w-full object-cover"
+          />
+        </div>x
+      )}
+
+      <AddVehicleSheet
+        open={open}
+        onClose={() => setOpen(false)}
+        onSave={() => window.location.reload()}
+        catalog={VEHICLE_CATALOG}
+
+      />
+    </div>
+  )
+}
