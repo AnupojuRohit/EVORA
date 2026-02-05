@@ -6,7 +6,7 @@ import {
   TrendingUp,
   Settings,
   Clock,
-  Battery
+  Layers
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
@@ -126,7 +126,7 @@ const AdminDashboard = () => {
                         <p className="text-sm text-muted-foreground">{station.address}</p>
                         <div className="flex flex-wrap items-center gap-4 mt-3">
                           <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                            <Battery className="w-4 h-4 text-primary" />
+                            <Layers className="w-4 h-4 text-primary" />
                             {(station.supported_charger_types?.length ?? 0)} types
                           </span>
                           <span className="flex items-center gap-1.5 text-sm text-muted-foreground">

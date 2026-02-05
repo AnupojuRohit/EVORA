@@ -19,6 +19,7 @@ import UserDashboard from "./pages/user/Dashboard";
 import MyVehicles from "./pages/user/MyVehicles";
 import UserBookings from "./pages/user/Bookings";
 import TransactionsPage from "./pages/user/TransactionsPage";
+import WalletPage from "./pages/user/Wallet";
 import SlotSelectionPage from "./pages/user/SlotSelection";
 import PaymentPage from "./pages/user/Payment";
 import TicketPage from "./pages/user/TicketPage";
@@ -63,6 +64,7 @@ const App = () => {
               <Route path="vehicles" element={<MyVehicles />} />
               <Route path="bookings" element={<UserBookings />} />
               <Route path="transactions" element={<TransactionsPage />} />
+              <Route path="wallet" element={<WalletPage />} />
             </Route>
 
             {/* ================= BOOKING FLOW (NO DASHBOARD LAYOUT) ================= */}

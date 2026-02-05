@@ -174,7 +174,7 @@ export default function MyVehicles() {
             alt="vehicle"
             className="rounded-2xl w-full object-cover"
           />
-        </div>x
+        </div>
       )}
 
       <AddVehicleSheet

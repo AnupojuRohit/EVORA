@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import DashboardLayout from "../../components/layout/DashboardLayout"
 import { carAPI } from "../../lib/api"
-import { ArrowLeft, BatteryCharging, MapPin, Zap } from "lucide-react"
+import { ArrowLeft, MapPin, ShieldCheck, Zap } from "lucide-react"
 
 export default function VehicleDetails() {
   const { vehicleId } = useParams()
@@ -48,9 +48,9 @@ export default function VehicleDetails() {
             <p className="text-white/60">{vehicle.car_number}</p>
 
             <div className="flex flex-wrap gap-4 pt-4">
-              <Stat icon={BatteryCharging} label="Battery" value="78%" />
-              <Stat icon={Zap} label="Range" value="312 km" />
-              <Stat icon={MapPin} label="Purchased" value="12 Jan 2024" />
+              <Stat icon={Zap} label="Charger type" value={vehicle.charger_type || "—"} />
+              <Stat icon={MapPin} label="Registration" value={vehicle.car_number} />
+              <Stat icon={ShieldCheck} label="Status" value="Ready for booking" />
             </div>
           </div>
 
@@ -66,9 +66,9 @@ export default function VehicleDetails() {
 
         {/* EXTRA INFO */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Info title="Charger Type" value={vehicle.charger_type} />
-          <Info title="Total Sessions" value="24" />
-          <Info title="Total Energy Used" value="186 kWh" />
+          <Info title="Charger Type" value={vehicle.charger_type || "—"} />
+          <Info title="Vehicle ID" value={vehicle.id} />
+          <Info title="Booking readiness" value="Complete" />
         </div>
       </div>
     </DashboardLayout>
