@@ -15,5 +15,9 @@ class Car(Base):
     model = Column(String, nullable=False)
     car_number = Column(String, unique=True, nullable=False)
     charger_type = Column(String, nullable=False)
+    
+    # Additional details
+    purchase_date = Column(String, nullable=True)
+    purchase_city = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

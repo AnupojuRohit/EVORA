@@ -180,7 +180,22 @@ export default function MyVehicles() {
       <AddVehicleSheet
         open={open}
         onClose={() => setOpen(false)}
-        onSave={() => window.location.reload()}
+        onSave={async (data) => {
+          try {
+            await carAPI.addCar({
+              brand: data.brand,
+              model: data.model,
+              car_number: data.carNumber,
+              charger_type: data.chargerType,
+            })
+            // Refresh vehicle list
+            const res = await carAPI.getCars()
+            setVehicles(res.data)
+          } catch (err) {
+            console.error("Failed to add vehicle:", err)
+            alert("Failed to add vehicle")
+          }
+        }}
         catalog={VEHICLE_CATALOG}
 
       />

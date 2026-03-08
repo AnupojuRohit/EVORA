@@ -79,15 +79,16 @@ def seed_data():
         db.refresh(charger)
 
         # -------------------------
-        # SLOTS
+        # SLOTS (6 slots per charger, starting from next hour)
         # -------------------------
-        start = datetime.now().replace(hour=10, minute=0, second=0)
-        for i in range(4):
+        now = datetime.now()
+        next_hour = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+        for i in range(6):
             slot = Slot(
                 id=str(uuid.uuid4()),
                 charger_id=charger.id,
-                start_time=start + timedelta(hours=i),
-                end_time=start + timedelta(hours=i + 1),
+                start_time=next_hour + timedelta(hours=i),
+                end_time=next_hour + timedelta(hours=i + 1),
                 is_available=True,
             )
             db.add(slot)

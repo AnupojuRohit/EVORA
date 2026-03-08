@@ -13,6 +13,7 @@ import {
   Zap,
   X,
 } from "lucide-react"
+import { useArrivalCountdown } from "@/hooks/useArrivalCountdown"
 
 /* ----------------------------
    Types
@@ -151,45 +152,28 @@ const ArrivalTimerCard = ({
   hasPenalty = false,
 }: ArrivalTimerCardProps) => {
   const navigate = useNavigate()
-  const [now, setNow] = useState(Date.now())
   const [arrivalState, setArrivalState] = useState<ArrivalState>("BEFORE_SLOT")
   const [showExtensionModal, setShowExtensionModal] = useState(false)
   const [extensionMinutes, setExtensionMinutes] = useState(0)
 
-  // Update clock every second
+  // Use the reusable countdown hook with dynamic extension time
+  const {
+    remainingTimeFormatted,
+    remainingMs,
+    isExpired,
+    isBeforeSlotStart,
+    timeUntilSlotStartFormatted,
+    isWarning,
+  } = useArrivalCountdown(booking.created_at, 20 + extensionMinutes, booking.start_time)
+
+  // Auto-transition to MISSED state when timer expires (only after slot has started)
   useEffect(() => {
-    const interval = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(interval)
-  }, [])
-
-  // Calculate arrival deadline (20 minutes from booking creation or before slot start)
-  const arrivalDeadline = useMemo(() => {
-    if (booking.created_at) {
-      return new Date(booking.created_at).getTime() + (20 + extensionMinutes) * 60 * 1000
-    }
-    if (booking.start_time) {
-      return new Date(booking.start_time).getTime()
-    }
-    return null
-  }, [booking, extensionMinutes])
-
-  const timeRemaining = arrivalDeadline ? arrivalDeadline - now : null
-
-  // Auto-transition to MISSED state when timer expires
-  useEffect(() => {
-    if (timeRemaining !== null && timeRemaining <= 0 && arrivalState === "BEFORE_SLOT") {
+    // Don't transition to MISSED if we're still before the slot start time
+    if (!isBeforeSlotStart && isExpired && arrivalState === "BEFORE_SLOT") {
       setArrivalState("MISSED")
       onMissed(booking.id)
     }
-  }, [timeRemaining, arrivalState, booking.id, onMissed])
-
-  const formatCountdown = (ms: number | null) => {
-    if (!ms || ms <= 0) return "00:00"
-    const totalSeconds = Math.floor(ms / 1000)
-    const minutes = Math.floor(totalSeconds / 60)
-    const seconds = totalSeconds % 60
-    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
-  }
+  }, [isExpired, arrivalState, booking.id, onMissed, isBeforeSlotStart])
 
   const formatTime = (dateStr?: string) => {
     if (!dateStr) return "—"
@@ -281,10 +265,10 @@ const ArrivalTimerCard = ({
                 ) : arrivalState === "EXTENSION_REQUESTED" ? (
                   "Processing..."
                 ) : (
-                  formatCountdown(timeRemaining)
+                  remainingTimeFormatted
                 )}
               </h3>
-              {arrivalState === "BEFORE_SLOT" && timeRemaining && timeRemaining < 5 * 60 * 1000 && (
+              {arrivalState === "BEFORE_SLOT" && isWarning && (
                 <p className="text-xs text-amber-300 mt-1 flex items-center gap-1">
                   <AlertTriangle className="w-3 h-3" /> Less than 5 minutes remaining
                 </p>
@@ -292,7 +276,7 @@ const ArrivalTimerCard = ({
             </div>
 
             {/* Progress ring for BEFORE_SLOT state */}
-            {arrivalState === "BEFORE_SLOT" && timeRemaining && (
+            {arrivalState === "BEFORE_SLOT" && remainingMs > 0 && (
               <div className="relative w-16 h-16">
                 <svg className="w-16 h-16 transform -rotate-90">
                   <circle
@@ -313,7 +297,7 @@ const ArrivalTimerCard = ({
                     strokeLinecap="round"
                     strokeDasharray={2 * Math.PI * 28}
                     strokeDashoffset={
-                      2 * Math.PI * 28 * (1 - Math.min(1, timeRemaining / ((20 + extensionMinutes) * 60 * 1000)))
+                      2 * Math.PI * 28 * (1 - Math.min(1, remainingMs / ((20 + extensionMinutes) * 60 * 1000)))
                     }
                     style={{ transition: "stroke-dashoffset 1s linear" }}
                   />

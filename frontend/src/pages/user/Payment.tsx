@@ -50,6 +50,8 @@ const state = location.state as {
   const [proofPreview, setProofPreview] = useState<string | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadComplete, setUploadComplete] = useState(false)
+  const [bookingError, setBookingError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Cleanup object URL on unmount
   useEffect(() => {
@@ -80,36 +82,49 @@ upi://pay
       navigate("/dashboard")
       return
     }
-  try {
-    const txnId = "TXN-" + uuidv4().slice(0, 12).toUpperCase()
-    setTransactionId(txnId)
+    
+    setBookingError(null)
+    setIsSubmitting(true)
+    
+    try {
+      const txnId = "TXN-" + uuidv4().slice(0, 12).toUpperCase()
+      setTransactionId(txnId)
 
-    const res = await bookingAPI.createBooking({
-      station_id: state.stationId,
-      slot_id: slot.id,
-      car_id: state.carId,
-      order_id: orderId,
-      transaction_id: txnId,
-      amount: slot.total_price,
-    })
-
-    const qrPayload = JSON.stringify({ ticketId: res.data.ticket_id, carId: state.carId })
-
-    navigate(`/booking/ticket/${res.data.booking_id}`, {
-      state: {
-        ticketId: res.data.ticket_id,
-        slot,
-        station: data.station,
-        transactionId: txnId,
+      const res = await bookingAPI.createBooking({
+        station_id: state.stationId,
+        slot_id: slot.id,
+        car_id: state.carId,
+        order_id: orderId,
+        transaction_id: txnId,
         amount: slot.total_price,
-        qrPayload,
-      },
-    })
-  } catch (err) {
-    console.error(err)
-    alert("Payment failed. Please try again.")
+      })
+
+      const qrPayload = JSON.stringify({ ticketId: res.data.ticket_id, carId: state.carId })
+
+      navigate(`/booking/ticket/${res.data.booking_id}`, {
+        state: {
+          ticketId: res.data.ticket_id,
+          slot,
+          station: data.station,
+          transactionId: txnId,
+          amount: slot.total_price,
+          qrPayload,
+        },
+      })
+    } catch (err: any) {
+      console.error(err)
+      const errorMsg = err?.response?.data?.detail || "Payment failed"
+      if (errorMsg.includes("not available")) {
+        setBookingError("This slot is no longer available. Please select another slot.")
+      } else if (errorMsg.includes("already exists")) {
+        setBookingError("This booking has already been processed.")
+      } else {
+        setBookingError(errorMsg)
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
   }
-}
 
   const handleUpload = (file: File | null) => {
     if (!file) return
@@ -127,6 +142,56 @@ upi://pay
         setUploadComplete(true)
       }
     }, 200)
+  }
+
+  const handlePayAtStation = async () => {
+    if (!state?.slot || !state?.stationId || !state?.carId) {
+      navigate("/dashboard")
+      return
+    }
+    
+    setBookingError(null)
+    setIsSubmitting(true)
+    
+    try {
+      const txnId = "PAY-AT-STATION-" + uuidv4().slice(0, 8).toUpperCase()
+      setTransactionId(txnId)
+
+      const res = await bookingAPI.createBooking({
+        station_id: state.stationId,
+        slot_id: slot!.id,
+        car_id: state.carId,
+        order_id: orderId,
+        transaction_id: txnId,
+        amount: slot!.total_price,
+      })
+
+      const qrPayload = JSON.stringify({ ticketId: res.data.ticket_id, carId: state.carId })
+
+      navigate(`/booking/ticket/${res.data.booking_id}`, {
+        state: {
+          ticketId: res.data.ticket_id,
+          slot,
+          station: data.station,
+          transactionId: txnId,
+          amount: slot!.total_price,
+          qrPayload,
+          payAtStation: true,
+        },
+      })
+    } catch (err: any) {
+      console.error(err)
+      const errorMsg = err?.response?.data?.detail || "Booking failed"
+      if (errorMsg.includes("not available")) {
+        setBookingError("This slot is no longer available. Please select another slot.")
+      } else if (errorMsg.includes("already exists")) {
+        setBookingError("This booking has already been processed.")
+      } else {
+        setBookingError(errorMsg)
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   /* ----------------------------
@@ -267,17 +332,29 @@ upi://pay
               Charging starts only after payment confirmation.
             </p>
 
+            {bookingError && (
+              <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-300">
+                {bookingError}
+                <button
+                  onClick={() => navigate(-1)}
+                  className="mt-2 text-xs underline hover:no-underline"
+                >
+                  Go back and select another slot
+                </button>
+              </div>
+            )}
+
             {!paymentSuccess ? (
               <button
                 onClick={handleConfirmPayment}
-                disabled={!uploadComplete}
+                disabled={!uploadComplete || isSubmitting}
                 className={`mt-2 px-6 py-3 rounded-full font-semibold transition shadow-[0_20px_50px_-30px_rgba(16,185,129,0.7)] ${
-                  !uploadComplete
+                  !uploadComplete || isSubmitting
                     ? "bg-white/10 text-slate-500 cursor-not-allowed"
                     : "bg-emerald-500 text-slate-900 hover:bg-emerald-400"
                 }`}
               >
-                Continue to Ticket
+                {isSubmitting ? "Processing..." : "Continue to Ticket"}
               </button>
             ) : (
               <div className="mt-2 flex flex-col items-center gap-2 text-emerald-300">
@@ -286,6 +363,37 @@ upi://pay
                 <p className="text-xs text-slate-400">Transaction ID: {transactionId}</p>
               </div>
             )}
+          </div>
+
+          {/* Pay at Station Option */}
+          <div className="p-6 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20">
+                <span className="text-amber-400 text-lg">₹</span>
+              </div>
+              <div>
+                <h2 className="font-semibold">Pay at Station</h2>
+                <p className="text-xs text-slate-400">Reserve now, pay when you arrive</p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-slate-300 space-y-2">
+              <p>• Your slot will be reserved for 20 minutes</p>
+              <p>• Pay via UPI, card, or cash at the Stations</p>
+              <p>• Show your ticket QR code to the station attendant</p>
+            </div>
+
+            <button
+              onClick={handlePayAtStation}
+              disabled={isSubmitting}
+              className={`w-full px-6 py-3 rounded-full font-semibold border transition ${
+                isSubmitting
+                  ? "bg-white/10 text-slate-500 cursor-not-allowed border-white/10"
+                  : "bg-amber-500/20 text-amber-300 border-amber-500/30 hover:bg-amber-500/30"
+              }`}
+            >
+              {isSubmitting ? "Processing..." : "Reserve & Pay at Station"}
+            </button>
           </div>
         </div>
       </div>

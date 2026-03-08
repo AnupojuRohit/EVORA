@@ -23,18 +23,37 @@ import WalletPage from "./pages/user/Wallet";
 import SlotSelectionPage from "./pages/user/SlotSelection";
 import PaymentPage from "./pages/user/Payment";
 import TicketPage from "./pages/user/TicketPage";
+import ProfileSettingsPage from "./pages/user/ProfileSettings";
+import QRScanResult from "./pages/user/QRScanResult";
 
 /* Admin */
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminStationPage from "./pages/admin/Station";
 import StationManage from "./pages/admin/StationManage";
 import AdminSlotPage from "./pages/admin/Slot";
+import AdminUsersPage from "./pages/admin/Users";
+import AdminWalletPage from "./pages/admin/Wallet";
 
 /* Layout */
 import DashboardLayout from "@/components/layout/DashboardLayout";
 
+/* Components */
+import FloatingChatbot from "@/components/FloatingChatbot";
+
 /* ================= SETUP ================= */
 const queryClient = new QueryClient();
+
+/* User Layout Wrapper with Chatbot */
+const UserLayoutWrapper = () => {
+  return (
+    <>
+      <DashboardLayout>
+        <Outlet />
+      </DashboardLayout>
+      <FloatingChatbot />
+    </>
+  );
+};
 
 const App = () => {
   return (
@@ -54,11 +73,7 @@ const App = () => {
             {/* ================= USER DASHBOARD ================= */}
             <Route
               path="/dashboard"
-              element={
-                <DashboardLayout userType="user">
-                  <Outlet />
-                </DashboardLayout>
-              }
+              element={<UserLayoutWrapper />}
             >
               <Route index element={<UserDashboard />} />
               <Route path="vehicles" element={<MyVehicles />} />
@@ -67,10 +82,14 @@ const App = () => {
               <Route path="wallet" element={<WalletPage />} />
             </Route>
 
+            {/* ================= PROFILE SETTINGS (SEPARATE LAYOUT) ================= */}
+            <Route path="/profile" element={<ProfileSettingsPage />} />
+
             {/* ================= BOOKING FLOW (NO DASHBOARD LAYOUT) ================= */}
             <Route path="/booking/:stationId/slots" element={<SlotSelectionPage />} />
             <Route path="/booking/payment" element={<PaymentPage />} />
             <Route path="/booking/ticket/:bookingId" element={<TicketPage />} />
+            <Route path="/scan" element={<QRScanResult />} />
 
             {/* ================= ADMIN ================= */}
             <Route path="/admin/login" element={<AdminLogin />} />
@@ -82,6 +101,9 @@ const App = () => {
               element={<StationManage />}
             />
             <Route path="/admin/slots" element={<AdminSlotPage />} />
+            <Route path="/admin/users" element={<AdminUsersPage />} />
+            <Route path="/admin/vehicles" element={<AdminUsersPage />} />
+            <Route path="/admin/wallet" element={<AdminWalletPage />} />
 
             {/* ================= FALLBACK ================= */}
             <Route path="*" element={<NotFound />} />

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import DashboardLayout from "@/components/layout/DashboardLayout";
+import AdminDashboardLayout from "@/components/layout/AdminDashboardLayout";
 import { Trash2, Zap, Clock, ArrowLeft } from "lucide-react";
 import { stationAPI, chargerAPI, slotAPI } from "@/lib/api";
 
@@ -77,14 +77,14 @@ const StationManage = () => {
   };
 
   return (
-    <DashboardLayout userType="admin" userName="Admin User">
-      <div className="space-y-6 max-w-6xl">
+    <AdminDashboardLayout userName="Admin User">
+      <div className="space-y-6 max-w-6xl p-10">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Manage Station</h1>
-            <p className="text-sm text-muted-foreground">Station ID: {stationId}</p>
+            <h1 className="text-2xl font-bold text-white">Manage Station</h1>
+            <p className="text-sm text-white/50">Station ID: {stationId}</p>
           </div>
-          <button onClick={() => navigate(-1)} className="text-sm text-muted-foreground hover:text-foreground">
+          <button onClick={() => navigate(-1)} className="text-sm text-white/70 hover:text-white">
             <ArrowLeft className="inline w-4 h-4 mr-1" /> Back
           </button>
         </div>
@@ -171,7 +171,7 @@ const StationManage = () => {
           </>
         )}
       </div>
-    </DashboardLayout>
+    </AdminDashboardLayout>
   );
 };
 

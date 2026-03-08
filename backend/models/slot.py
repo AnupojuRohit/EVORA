@@ -15,3 +15,4 @@ class Slot(Base):
     end_time = Column(DateTime, nullable=False)
 
     is_available = Column(Boolean, default=True)
+    is_emergency_reserved = Column(Boolean, default=False)  # Reserved for emergency bookings only

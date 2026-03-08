@@ -20,7 +20,7 @@ export default function VehicleDetails() {
   if (!vehicle) return null
 
   return (
-    <DashboardLayout userType="user">
+    <DashboardLayout>
       <div className="max-w-6xl mx-auto px-6 py-10 space-y-8">
 
         {/* BACK */}

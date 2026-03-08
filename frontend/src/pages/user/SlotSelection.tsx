@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useParams, useNavigate, useLocation } from "react-router-dom"
 import { ArrowLeft, Zap, Clock, Car, MapPin, CreditCard, AlertCircle } from "lucide-react"
 import { stationAPI } from "@/lib/api"
+import { SmartSlotRecommendationCard } from "@/components/SmartSlotRecommendationCard"
+import { getSlotRecommendations, SlotRecommendation } from "@/lib/recommendationEngine"
+import { ChargingCompletionPredictor } from "@/components/ChargingCompletionPredictor"
 
 interface Slot {
   id: string
@@ -46,6 +49,18 @@ export default function SlotSelectionPage() {
   const [selectedCharger, setSelectedCharger] = useState<Charger | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
   const [loading, setLoading] = useState(true)
+
+  // Compute slot recommendations
+  const recommendations = useMemo(() => {
+    if (chargers.length === 0) return []
+    return getSlotRecommendations(chargers)
+  }, [chargers])
+
+  // Handle selecting a recommendation
+  const handleSelectRecommendation = (rec: SlotRecommendation) => {
+    setSelectedCharger(rec.charger)
+    setSelectedSlot(rec.slot)
+  }
 
   // Redirect if essential state is missing
   useEffect(() => {
@@ -145,6 +160,15 @@ export default function SlotSelectionPage() {
                 </div>
               </div>
 
+              {/* SMART SLOT RECOMMENDATIONS */}
+              {!loading && recommendations.length > 0 && (
+                <SmartSlotRecommendationCard
+                  recommendations={recommendations}
+                  onSelectRecommendation={handleSelectRecommendation}
+                  selectedSlotId={selectedSlot?.id}
+                />
+              )}
+
               {/* CHARGER SELECTION */}
               <div className="rounded-3xl bg-white/5 border border-white/10 p-6 backdrop-blur-xl">
                 <div className="flex items-center gap-3 mb-6">
@@ -213,6 +237,14 @@ export default function SlotSelectionPage() {
                   </div>
                 </div>
               )}
+
+              {/* CHARGING TIME PREDICTOR */}
+              {selectedCharger && (
+                <ChargingCompletionPredictor
+                  vehicleModel={`${vehicle.brand} ${vehicle.model}`}
+                  chargerPowerKw={selectedCharger.power_kw}
+                />
+              )}
             </div>
 
             {/* SUMMARY COLUMN */}
@@ -257,9 +289,13 @@ export default function SlotSelectionPage() {
                       }
                     }
                   })}
-                  className="w-full mt-8 py-4 rounded-2xl font-bold bg-emerald-500 text-black hover:bg-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/20"
+                  className={`w-full mt-8 py-4 rounded-2xl font-bold transition-all shadow-lg ${
+                    selectedSlot 
+                      ? "bg-emerald-500 text-black hover:bg-emerald-400 shadow-emerald-500/20" 
+                      : "bg-white/10 text-white/50 border border-white/20 cursor-not-allowed"
+                  }`}
                 >
-                  Confirm & Pay
+                  {selectedSlot ? "Confirm & Pay" : "Select a Slot to Continue"}
                 </button>
               </div>
             </div>

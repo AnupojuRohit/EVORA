@@ -25,7 +25,9 @@ import {
   Zap,
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
-import { carAPI, stationAPI } from "@/lib/api"
+import { carAPI, stationAPI, bookingAPI } from "@/lib/api"
+import { EmergencyBookingModal } from "@/components/modals/EmergencyBookingModal"
+import { useToast } from "@/hooks/use-toast"
 import L from "leaflet"
 import { AnimatePresence, motion } from "framer-motion"
 
@@ -77,9 +79,59 @@ const BookingPage = () => {
   const [co2Saved, setCo2Saved] = useState(0)
   const [sessionsCount, setSessionsCount] = useState(0)
   const stationSectionRef = useRef<HTMLDivElement | null>(null)
+  
+  // Emergency booking modal state
+  const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false)
+  const [emergencySubmitting, setEmergencySubmitting] = useState(false)
+  const { toast } = useToast()
 
   // Check for penalty flag
   const hasPenalty = localStorage.getItem("evora_penalty") === "true"
+
+  // Handle emergency booking submission
+  const handleEmergencyBooking = async (data: {
+    vehicleNumber: string
+    carId?: string
+    chargerType: "AC" | "DC" | "Ultra-Fast"
+    estimatedDuration: number
+    stationId: string
+    notes?: string
+  }) => {
+    if (!selectedStation) {
+      toast({
+        title: "Station Required",
+        description: "Please select a station first",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setEmergencySubmitting(true)
+    try {
+      await bookingAPI.createEmergencyRequest({
+        station_id: data.stationId || selectedStation.id,
+        vehicle_number: data.vehicleNumber,
+        car_id: data.carId,
+        charger_type: data.chargerType,
+        estimated_duration: data.estimatedDuration,
+        notes: data.notes,
+      })
+      toast({
+        title: "Emergency Request Submitted",
+        description: "Your request has been sent to the station. You'll be notified once approved.",
+      })
+      setIsEmergencyModalOpen(false)
+    } catch (error) {
+      console.error("Emergency booking failed:", error)
+      toast({
+        title: "Request Failed",
+        description: "Failed to submit emergency request. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setEmergencySubmitting(false)
+    }
+  }
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -847,11 +899,35 @@ const BookingPage = () => {
                 >
                   Proceed to Slot Selection
                 </motion.button>
+
+                {/* Emergency Booking Option - always available when station selected */}
+                {selectedStation && (
+                  <motion.button
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setIsEmergencyModalOpen(true)}
+                    className="w-full mt-3 py-3 rounded-full font-semibold transition bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-400 hover:to-orange-400 flex items-center justify-center gap-2"
+                  >
+                    <Zap className="w-4 h-4" />
+                    Request Emergency Slot
+                  </motion.button>
+                )}
               </motion.div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Emergency Booking Modal */}
+      <EmergencyBookingModal
+        isOpen={isEmergencyModalOpen}
+        onClose={() => setIsEmergencyModalOpen(false)}
+        onSubmit={handleEmergencyBooking}
+        stationId={selectedStation?.id || ""}
+        stationName={selectedStation?.name || ""}
+      />
     </motion.div>
   )
 }

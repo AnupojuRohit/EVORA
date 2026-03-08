@@ -201,9 +201,15 @@ def get_station_chargers_with_slots(station_id: str, db: Session = Depends(get_d
 
     slots = []
     if charger_ids:
+        # Only return FUTURE slots (start_time > now)
+        from datetime import datetime
+        now = datetime.utcnow()
         slots = (
             db.query(Slot)
-            .filter(Slot.charger_id.in_(charger_ids))
+            .filter(
+                Slot.charger_id.in_(charger_ids),
+                Slot.start_time > now  # Only future slots
+            )
             .order_by(Slot.start_time)
             .all()
         )
@@ -270,9 +276,16 @@ def get_station_availability(
             "total_slots": 0
         }
 
+    # Only count FUTURE slots
+    from datetime import datetime
+    now = datetime.utcnow()
+
     total_slots = (
         db.query(Slot)
-        .filter(Slot.charger_id.in_(charger_ids))
+        .filter(
+            Slot.charger_id.in_(charger_ids),
+            Slot.start_time > now  # Only future slots
+        )
         .count()
     )
 
@@ -280,7 +293,8 @@ def get_station_availability(
         db.query(Slot)
         .filter(
             Slot.charger_id.in_(charger_ids),
-            Slot.is_available == True
+            Slot.is_available == True,
+            Slot.start_time > now  # Only future slots
         )
         .count()
     )
@@ -410,6 +424,20 @@ def add_charger_to_station(
     db.add(new_charger)
     db.commit()
     db.refresh(new_charger)
+    
+    # Automatically create 6 available slots for the new charger
+    now = datetime.now()
+    next_hour = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+    for i in range(6):
+        slot = Slot(
+            charger_id=new_charger.id,
+            start_time=next_hour + timedelta(hours=i),
+            end_time=next_hour + timedelta(hours=i + 1),
+            is_available=True
+        )
+        db.add(slot)
+    db.commit()
+    
     return {"id": new_charger.id}
 
 @router.put("/{station_id}")

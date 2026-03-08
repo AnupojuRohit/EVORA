@@ -4,6 +4,8 @@ import AppleStat from "./AppleStat"
 import Row from "./Row"
 import { carAPI, stationAPI, bookingAPI } from "../../lib/api"
 import ArrivalTimerCard from "@/components/ArrivalTimerCard"
+import ActiveBookingCard from "@/components/ActiveBookingCard"
+import PeakHourChart from "@/components/PeakHourChart"
 import {
   BadgeCheck,
   CalendarClock,
@@ -113,21 +115,42 @@ const Dashboard = () => {
     return now >= start && now <= end
   })
 
-  const latestBooking = useMemo(() => {
-    if (bookings.length === 0) return null
-    return [...bookings].sort((a, b) => {
-      const aTime = new Date(a.created_at || a.start_time || 0).getTime()
-      const bTime = new Date(b.created_at || b.start_time || 0).getTime()
-      return bTime - aTime
-    })[0]
-  }, [bookings])
-
-  // Find active ticket that hasn't been arrived yet
+  // Find active ticket that hasn't expired yet
+  // Only show bookings where arrival window hasn't ended:
+  // - Upcoming bookings (start_time > now)
+  // - Currently active bookings (start <= now <= end)
+  // - Bookings within arrival window (created_at + 20min > now)
   const ticketBooking = useMemo(() => {
-    const candidates = [...activeBookings, ...upcomingBookings, latestBooking].filter(Boolean)
+    const arrivalWindowMs = 20 * 60 * 1000 // 20 minutes
+    
+    // Helper to parse UTC datetime from backend
+    const parseUTC = (str: string) => {
+      let t = str
+      if (!t.endsWith('Z') && !t.includes('+') && !t.includes('-', 10)) {
+        t = t.replace(' ', 'T') + 'Z'
+      }
+      return new Date(t).getTime()
+    }
+    
+    // Filter to only bookings that are still valid (not completely expired)
+    const validBookings = bookings.filter(b => {
+      if (!b.start_time || !b.created_at) return false
+      const createdAt = parseUTC(b.created_at)
+      const endTime = b.end_time ? parseUTC(b.end_time) : parseUTC(b.start_time) + 60 * 60 * 1000
+      const arrivalDeadline = createdAt + arrivalWindowMs
+      
+      // Valid if: currently in session OR still within arrival window from booking time
+      return now < endTime || now < arrivalDeadline
+    })
+    
+    // Sort by start_time (soonest first)
+    const sorted = validBookings.sort((a, b) => {
+      return new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+    })
+    
     // Find first booking that user hasn't confirmed arrival for
-    return candidates.find(b => b && !arrivedBookings.has(b.id)) || candidates[0]
-  }, [activeBookings, upcomingBookings, latestBooking, arrivedBookings])
+    return sorted.find(b => !arrivedBookings.has(b.id)) || sorted[0] || null
+  }, [bookings, now, arrivedBookings])
 
   // Arrival handlers
   const handleArrivalConfirm = (bookingId: string) => {
@@ -148,15 +171,14 @@ const Dashboard = () => {
     console.log(`Booking ${bookingId} marked as missed`)
   }
 
+  // Arrival deadline: created_at + 20 minute arrival window
   const arrivalDeadline = useMemo(() => {
-    if (!ticketBooking) return null
-    if (ticketBooking.created_at) {
-      return new Date(ticketBooking.created_at).getTime() + 20 * 60 * 1000
+    if (!ticketBooking?.created_at) return null
+    let t = ticketBooking.created_at
+    if (!t.endsWith('Z') && !t.includes('+') && !t.includes('-', 10)) {
+      t = t.replace(' ', 'T') + 'Z'
     }
-    if (ticketBooking.start_time) {
-      return new Date(ticketBooking.start_time).getTime() - 20 * 60 * 1000
-    }
-    return null
+    return new Date(t).getTime() + 20 * 60 * 1000
   }, [ticketBooking])
 
   const arrivalRemaining = arrivalDeadline ? arrivalDeadline - now : null
@@ -319,14 +341,69 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {ticketBooking && (
-              <ArrivalTimerCard
-                booking={ticketBooking}
-                onArrivalConfirm={handleArrivalConfirm}
-                onExtensionRequest={handleExtensionRequest}
-                onMissed={handleMissed}
-                hasPenalty={hasPenalty}
-              />
+            {ticketBooking ? (
+              <>
+                {/* Active Booking Card with QR */}
+                <ActiveBookingCard 
+                  booking={ticketBooking}
+                  onViewTicket={() => navigate(`/booking/ticket/${ticketBooking.id}`, {
+                    state: {
+                      ticketId: ticketBooking.ticket_id || ticketBooking.order_id || ticketBooking.id,
+                      slot: {
+                        id: ticketBooking.id,
+                        start_time: ticketBooking.start_time,
+                        end_time: ticketBooking.end_time,
+                        charger_type: ticketBooking.charger_type,
+                        total_price: ticketBooking.amount,
+                      },
+                      station: {
+                        name: ticketBooking.station_name || ticketBooking.station?.name,
+                        latitude: ticketBooking.station?.latitude,
+                        longitude: ticketBooking.station?.longitude,
+                      },
+                      qrPayload: ticketBooking.ticket_id || ticketBooking.order_id || ticketBooking.id,
+                      created_at: ticketBooking.created_at,
+                    }
+                  })}
+                />
+                
+                {/* Arrival Timer Card */}
+                <ArrivalTimerCard
+                  booking={ticketBooking}
+                  onArrivalConfirm={handleArrivalConfirm}
+                  onExtensionRequest={handleExtensionRequest}
+                  onMissed={handleMissed}
+                  hasPenalty={hasPenalty}
+                />
+              </>
+            ) : (
+              /* Empty State - No Active Bookings */
+              <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-emerald-500/5 to-cyan-500/5 p-6 backdrop-blur-xl">
+                <div className="text-center space-y-4">
+                  <div className="mx-auto w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                    <Zap className="w-8 h-8 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">No Active Bookings</h3>
+                    <p className="text-sm text-white/50 mt-1">
+                      Book a charging slot to see your ticket here
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => navigate("/dashboard/bookings")}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-emerald-500 text-slate-900 font-semibold text-sm hover:bg-emerald-400 transition"
+                  >
+                    <Zap className="w-4 h-4" />
+                    Find & Book Charger
+                  </button>
+                  
+                  {pastBookings.length > 0 && (
+                    <p className="text-xs text-white/40 pt-2">
+                      You have {pastBookings.length} past booking{pastBookings.length > 1 ? "s" : ""}
+                    </p>
+                  )}
+                </div>
+              </div>
             )}
           </div>
 
@@ -380,6 +457,14 @@ const Dashboard = () => {
                   : "Your charging sessions are matched with cleaner grid windows."}
               </p>
             </div>
+            
+            {/* Peak Hours Chart */}
+            <PeakHourChart 
+              bookings={bookings}
+              title="Best Times to Charge"
+              description="Find low-rush charging hours"
+              showRecommendation={true}
+            />
           </div>
         </div>
 

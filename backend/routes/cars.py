@@ -60,3 +60,31 @@ def delete_car(
     db.commit()
 
     return {"status": "ok"}
+
+
+@router.patch("/{car_id}", response_model=CarOut)
+def update_car(
+    car_id: str,
+    updates: dict,
+    db: Session = Depends(get_db),
+    user_id: str | None = Depends(get_current_user),
+):
+    query = db.query(Car).filter(Car.id == car_id)
+
+    if user_id:
+        query = query.filter(Car.user_id == user_id)
+
+    car = query.first()
+
+    if not car:
+        raise HTTPException(status_code=404, detail="Car not found")
+
+    # Update allowed fields
+    allowed_fields = ["brand", "model", "car_number", "charger_type", "purchase_date", "purchase_city"]
+    for key, value in updates.items():
+        if key in allowed_fields:
+            setattr(car, key, value)
+
+    db.commit()
+    db.refresh(car)
+    return car
