@@ -192,12 +192,21 @@ def get_station_chargers(station_id: str, db: Session = Depends(get_db)):
 
 @router.get("/{station_id}/chargers-with-slots")
 def get_station_chargers_with_slots(station_id: str, db: Session = Depends(get_db)):
+    # 🔑 CLEANUP FIRST
+    cleanup_expired_bookings(db)
+    # 🔁 Roll forward ended free slots to maintain daily cycles
+    roll_free_slots_forward(db)
+
     chargers = (
         db.query(Charger)
         .filter(Charger.station_id == station_id)
         .all()
     )
     charger_ids = [c.id for c in chargers]
+
+    # ensure daily regeneration based on templates
+    if charger_ids:
+        ensure_today_slots(db, station_id, charger_ids)
 
     slots = []
     if charger_ids:

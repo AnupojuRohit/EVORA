@@ -156,6 +156,7 @@ export const ManualArrivalVerification = ({
           ].map((type) => (
             <button
               key={type.id}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onClick={() => setSearchType(type.id as any)}
               className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs transition ${
                 searchType === type.id

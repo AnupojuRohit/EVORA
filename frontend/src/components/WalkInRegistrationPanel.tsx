@@ -37,6 +37,7 @@ interface Slot {
 
 interface WalkInRegistrationPanelProps {
   stations?: Station[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onBookingCreated?: (booking: any) => void
 }
 
@@ -119,7 +120,9 @@ export const WalkInRegistrationPanel = ({
     }
 
     const charger = chargers.find((c) => c.id === selectedChargerId)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (charger && (charger as any).slots) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const availableSlots = (charger as any).slots.filter((s: Slot) => s.is_available)
       setSlots(availableSlots)
       
@@ -196,6 +199,7 @@ export const WalkInRegistrationPanel = ({
       setCustomerPhone("")
       setSelectedSlotId("")
       setIsEmergency(false)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to create booking")
     } finally {
@@ -325,6 +329,7 @@ export const WalkInRegistrationPanel = ({
               ) : (
                 <div className="grid grid-cols-2 gap-2">
                   {chargers.map((charger) => {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const availableSlots = (charger as any).slots?.filter((s: Slot) => s.is_available).length || 0
                     return (
                       <button

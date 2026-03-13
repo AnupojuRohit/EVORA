@@ -1,0 +1,4 @@
+﻿src/pages/Index.tsx(226,99): error TS1127: Invalid character.
+src/pages/Index.tsx(226,121): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/pages/Index.tsx(226,122): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/pages/Index.tsx(226,125): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?

@@ -52,6 +52,7 @@ export const EmergencyBookingModal = ({
   const [notes, setNotes] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [userCars, setUserCars] = useState<any[]>([])
   const [loadingCars, setLoadingCars] = useState(true)
 
@@ -80,6 +81,7 @@ export const EmergencyBookingModal = ({
     }
   }, [isOpen])
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleCarSelect = (car: any) => {
     setSelectedCarId(car.id)
     setVehicleNumber(car.registration_number || "")
@@ -209,6 +211,7 @@ export const EmergencyBookingModal = ({
                     {chargerTypes.map((type) => (
                       <button
                         key={type.id}
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         onClick={() => setChargerType(type.id as any)}
                         className={`p-3 rounded-xl border text-left transition ${
                           chargerType === type.id

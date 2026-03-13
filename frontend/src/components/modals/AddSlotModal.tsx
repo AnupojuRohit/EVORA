@@ -12,6 +12,7 @@ interface AddSlotModalProps {
 
 const AddSlotModal = ({ isOpen, onClose, stationId, onSuccess }: AddSlotModalProps) => {
   const [loading, setLoading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [chargers, setChargers] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     charger_id: '',

@@ -13,7 +13,7 @@ router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
 
 
-@router.post("/")
+@router.post("")
 def create_booking(
     data: dict,
     db: Session = Depends(get_db),
@@ -59,7 +59,7 @@ def create_booking(
     }
 
 
-@router.get("/")
+@router.get("")
 def get_user_bookings(
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user),

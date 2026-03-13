@@ -193,7 +193,7 @@ export const slotAPI = {
   generateSlotsForStation: (stationId: string) => api.post(`/slots/generate-for-station/${stationId}`),
 
   // Toggle emergency reserved status for a slot
-  toggleEmergencyReserved: (slotId: string, isEmergencyReserved: boolean) => 
+  toggleEmergencyReserved: (slotId: string, isEmergencyReserved: boolean) =>
     api.patch(`/slots/${slotId}/emergency-reserved`, { is_emergency_reserved: isEmergencyReserved }),
 }
 
